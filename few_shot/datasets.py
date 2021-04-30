@@ -185,8 +185,8 @@ class Fabric(Dataset):
         # Arguments:
             subset: Whether the dataset represents the background or evaluation set
         """
-        if subset not in ('background', 'evaluation'):
-            raise(ValueError, 'subset must be one of (background, evaluation)')
+        if subset not in ('background', 'evaluation', 'test'):
+            raise(ValueError, 'subset must be one of (background, evaluation, test)')
         self.subset = subset
 
         self.df = pd.DataFrame(self.index_subset(self.subset))

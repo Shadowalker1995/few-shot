@@ -8,8 +8,10 @@ from torch.nn import Module
 from torch.utils.data import DataLoader
 from typing import Callable, List, Union
 
+from tqdm import tqdm
+
 from few_shot.callbacks import DefaultCallback, ProgressBarLogger, CallbackList, Callback
-from few_shot.metrics import NAMED_METRICS
+from few_shot.metrics import NAMED_METRICS, categorical_accuracy
 
 
 def gradient_step(model: Module,
@@ -36,8 +38,9 @@ def gradient_step(model: Module,
         model.eval()
     y_pred = model(x)
     loss = loss_fn(y_pred, y)
-    loss.backward()
-    optimiser.step()
+    if train:
+        loss.backward()
+        optimiser.step()
 
     return loss, y_pred
 
@@ -147,3 +150,46 @@ def fit(model: Module,
         print('Finished.')
 
     callbacks.on_train_end()
+
+
+def test(model: Module,
+         optimiser: Optimizer,
+         loss_fn: Callable,
+         dataloader: DataLoader,
+         prepare_batch: Callable,
+         eval_fn: Callable = gradient_step,
+         prefix: str = 'test_'):
+    num_batches = len(dataloader)
+    pbar = tqdm(total=num_batches, desc='Testing')
+    loss_name = f'{prefix}loss'
+    acc_name = f'{prefix}acc'
+
+    seen = 0
+    totals = {loss_name: 0, acc_name: 0}
+    for batch_index, batch in enumerate(dataloader):
+        x, y = prepare_batch(batch)
+
+        loss, y_pred = eval_fn(
+            model,
+            optimiser,
+            loss_fn,
+            x,
+            y,
+            train=False,
+        )
+
+        loss_value = loss.item()
+        acc_value = categorical_accuracy(y, y_pred)
+
+        pbar.update(1)
+        pbar.set_postfix({loss_name: loss_value, acc_name: acc_value})
+
+        seen += y_pred.shape[0]
+
+        totals[loss_name] += loss_value * y_pred.shape[0]
+        totals[acc_name] += acc_value * y_pred.shape[0]
+
+    totals[loss_name] = totals[loss_name] / seen
+    totals[acc_name] = totals[acc_name] / seen
+
+    print(totals)
