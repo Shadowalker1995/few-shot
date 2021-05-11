@@ -158,6 +158,7 @@ def test(model: Module,
          dataloader: DataLoader,
          prepare_batch: Callable,
          eval_fn: Callable = gradient_step,
+         eval_fn_kwargs: dict = {'train': True},
          prefix: str = 'test_'):
     num_batches = len(dataloader)
     pbar = tqdm(total=num_batches, desc='Testing')
@@ -169,14 +170,7 @@ def test(model: Module,
     for batch_index, batch in enumerate(dataloader):
         x, y = prepare_batch(batch)
 
-        loss, y_pred = eval_fn(
-            model,
-            optimiser,
-            loss_fn,
-            x,
-            y,
-            train=False,
-        )
+        loss, y_pred = eval_fn(model, optimiser, loss_fn, x, y, **eval_fn_kwargs)
 
         loss_value = loss.item()
         acc_value = categorical_accuracy(y, y_pred)
