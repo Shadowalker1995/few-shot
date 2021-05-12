@@ -43,10 +43,10 @@ parser.add_argument('--q-test', type=int, default=1,
                     help='query samples per class for validation tasks')
 args = parser.parse_args()
 
-evaluation_episodes = 5
-test_episodes = 5
+evaluation_episodes = 100
+test_episodes = 1000
 # Arbitrary number of batches of n-shot tasks to generate in one epoch
-episodes_per_epoch = 5
+episodes_per_epoch = 100
 
 if args.dataset == 'omniglot':
     n_epochs = 40
@@ -59,10 +59,10 @@ elif args.dataset == 'miniImageNet':
     num_input_channels = 3
     drop_lr_every = 40
 elif args.dataset == 'Fabric':
-    n_epochs = 80
+    n_epochs = 200
     dataset_class = Fabric
     num_input_channels = 1
-    drop_lr_every = 40
+    drop_lr_every = 50
 else:
     raise(ValueError, 'Unsupported dataset')
 
@@ -83,7 +83,7 @@ background_taskloader = DataLoader(
 evaluation = dataset_class('evaluation')
 evaluation_taskloader = DataLoader(
     evaluation,
-    batch_sampler=NShotTaskSampler(evaluation, episodes_per_epoch, args.n_test, args.k_test, args.q_test),
+    batch_sampler=NShotTaskSampler(evaluation, evaluation_episodes, args.n_test, args.k_test, args.q_test),
     num_workers=4
 )
 test_data = dataset_class('test')
@@ -128,17 +128,17 @@ callbacks = [
         prepare_batch=prepare_nshot_task(args.n_test, args.k_test, args.q_test),
         distance=args.distance
     ),
-    TestFewShot(
-        checkpoint_filepath=f'{PATH}/models/proto_nets/{param_str}.pth',
-        eval_fn=proto_net_episode,
-        num_tasks=test_episodes,
-        n_shot=args.n_test,
-        k_way=args.k_test,
-        q_queries=args.q_test,
-        taskloader=test_taskloader,
-        prepare_batch=prepare_nshot_task(args.n_test, args.k_test, args.q_test),
-        distance=args.distance
-    ),
+    # TestFewShot(
+        # checkpoint_filepath=f'{PATH}/models/proto_nets/{param_str}.pth',
+        # eval_fn=proto_net_episode,
+        # num_tasks=test_episodes,
+        # n_shot=args.n_test,
+        # k_way=args.k_test,
+        # q_queries=args.q_test,
+        # taskloader=test_taskloader,
+        # prepare_batch=prepare_nshot_task(args.n_test, args.k_test, args.q_test),
+        # distance=args.distance
+    # ),
     ModelCheckpoint(
         filepath=PATH + f'/models/proto_nets/{param_str}.pth',
         monitor=f'val_{args.n_test}-shot_{args.k_test}-way_acc',
