@@ -55,10 +55,10 @@ elif args.dataset == 'miniImageNet':
     num_input_channels = 3
     drop_lr_every = 40
 elif args.dataset == 'Fabric':
-    n_epochs = 200
+    n_epochs = 90
     dataset_class = Fabric
     num_input_channels = 1
-    drop_lr_every = 150
+    drop_lr_every = 30
 else:
     raise(ValueError, 'Unsupported dataset')
 
@@ -73,7 +73,7 @@ print(param_str)
 background = dataset_class('background')
 background_taskloader = DataLoader(
     background,
-    batch_size=64,
+    batch_size=32,
     shuffle=True,
     num_workers=1,
     pin_memory=True
@@ -81,7 +81,7 @@ background_taskloader = DataLoader(
 evaluation = dataset_class('evaluation')
 evaluation_taskloader = DataLoader(
     evaluation,
-    batch_size=64,
+    batch_size=32,
     shuffle=True,
     num_workers=1,
     pin_memory=True
@@ -104,12 +104,11 @@ if not args.test:
     pretrained_filename = f'{PATH}/models/proto_nets/{param_str}.pth'
     checkpoints = torch.load(pretrained_filename)
     model.load_state_dict(checkpoints)
-    # remove the last Flatten layer
-    model = model[:-1]
-    for param in model.parameters():
-        param.requires_grad = False
+    # for param in model.parameters():
+        # param.requires_grad = False
     model = nn.Sequential(
-        model,
+        # remove the last Flatten layer
+        *list(model.children())[:-2],
         nn.AdaptiveAvgPool2d((1, 1)),
         nn.Flatten(),
         nn.Linear(64, 8)
@@ -120,10 +119,9 @@ if not args.test:
     model.to(device, dtype=torch.double)
 else:
     model = get_few_shot_encoder(num_input_channels)
-    # remove the last Flatten layer
-    model = model[:-1]
     model = nn.Sequential(
-        model,
+        # remove the last Flatten layer
+        *list(model.children())[:-2],
         nn.AdaptiveAvgPool2d((1, 1)),
         nn.Flatten(),
         nn.Linear(64, 8)
@@ -147,7 +145,7 @@ else:
 ############
 if not args.test:
     print(f'Training Prototypical classifier on {args.dataset}...')
-    optimiser = Adam(model.parameters(), lr=1e-4)
+    optimiser = Adam(model.parameters(), lr=1e-3, weight_decay=1e-4)
     loss_fn = torch.nn.CrossEntropyLoss().cuda()
 
 
