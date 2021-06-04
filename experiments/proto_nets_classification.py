@@ -104,31 +104,41 @@ if not args.test:
     pretrained_filename = f'{PATH}/models/proto_nets/{param_str}.pth'
     checkpoints = torch.load(pretrained_filename)
     model.load_state_dict(checkpoints)
+    # remove the last Flatten layer
+    model = model[:-1]
     for param in model.parameters():
         param.requires_grad = False
     model = nn.Sequential(
         model,
-        nn.Linear(64*3*3, 500),
-        nn.Dropout(0.75),
-        nn.Linear(500, 8)
+        nn.AdaptiveAvgPool2d((1, 1)),
+        nn.Flatten(),
+        nn.Linear(64, 8)
+        # nn.Linear(64*3*3, 500),
+        # nn.Dropout(0.75),
+        # nn.Linear(500, 8)
     )
     model.to(device, dtype=torch.double)
 else:
     model = get_few_shot_encoder(num_input_channels)
+    # remove the last Flatten layer
+    model = model[:-1]
     model = nn.Sequential(
         model,
-        nn.Linear(64*3*3, 500),
-        nn.Dropout(0.75),
-        nn.Linear(500, 8)
+        nn.AdaptiveAvgPool2d((1, 1)),
+        nn.Flatten(),
+        nn.Linear(64, 8)
+        # nn.Linear(64*3*3, 500),
+        # nn.Dropout(0.75),
+        # nn.Linear(500, 8)
     )
     for param in model.parameters():
         param.requires_grad = False
     pretrained_filename = f'{PATH}/models/proto_nets/{param_str}_classifier.pth'
     checkpoints = torch.load(pretrained_filename)
     model.load_state_dict(checkpoints)
-    model = nn.Sequential(
-            *list(model.children())[:-2],
-            *list(model.children())[-1:])
+    # model = nn.Sequential(
+    #         *list(model.children())[:-2],
+    #         *list(model.children())[-1:])
     model.to(device, dtype=torch.double)
 
 
