@@ -42,10 +42,10 @@ parser.add_argument('--q-test', type=int, default=1,
                     help='query samples per class for validation tasks')
 args = parser.parse_args()
 
-evaluation_episodes = 500
-test_episodes = 500
+evaluation_episodes = 1000
+test_episodes = 1000
 # Arbitrary number of batches of n-shot tasks to generate in one epoch
-episodes_per_epoch = 5
+episodes_per_epoch = 1000
 
 if args.dataset == 'omniglot':
     n_epochs = 40
@@ -65,8 +65,10 @@ elif args.dataset == 'Fabric':
 else:
     raise(ValueError, 'Unsupported dataset')
 
+# param_str = f'{args.dataset}_nt={args.n_train}_kt={args.k_train}_qt={args.q_train}_' \
+            # f'nv={args.n_test}_kv={args.k_test}_qv={args.q_test}'
 param_str = f'{args.dataset}_nt={args.n_train}_kt={args.k_train}_qt={args.q_train}_' \
-            f'nv={args.n_test}_kv={args.k_test}_qv={args.q_test}'
+            f'nv={args.n_test}_kv=2_qv={args.q_test}'
 
 print(param_str)
 
@@ -110,13 +112,26 @@ model.to(device, dtype=torch.double)
 ############
 optimiser = Adam(model.parameters(), lr=1e-3)
 loss_fn = torch.nn.NLLLoss().cuda()
+
+# test(
+    # model,
+    # optimiser,
+    # loss_fn,
+    # # dataloader=evaluation_taskloader,
+    # dataloader=test_taskloader,
+    # prepare_batch=prepare_nshot_task(args.n_test, args.k_test, args.q_test),
+    # eval_fn=proto_net_episode,
+    # eval_fn_kwargs={'n_shot': args.n_test, 'k_way': args.k_test, 'q_queries': args.q_test, 'train': False,
+                    # 'distance': args.distance},
+# )
+
 test(
     model,
     optimiser,
     loss_fn,
-    dataloader=evaluation_taskloader,
-    prepare_batch=prepare_nshot_task(args.n_test, args.k_test, args.q_test),
+    dataloader=background_taskloader,
+    prepare_batch=prepare_nshot_task(args.n_train, args.k_train, args.q_train),
     eval_fn=proto_net_episode,
-    eval_fn_kwargs={'n_shot': args.n_test, 'k_way': args.k_test, 'q_queries': args.q_test, 'train': False,
+    eval_fn_kwargs={'n_shot': args.n_train, 'k_way': args.k_train, 'q_queries': args.q_train, 'train': False,
                     'distance': args.distance},
 )
